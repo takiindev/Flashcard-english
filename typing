@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luyện Gõ Từ Vựng</title>
+    
+    <style>
+        /* Thiết lập chung bắt buộc */
+        * {
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 25px;
+            font-size: 1.8rem;
+        }
+
+        .vocab-card {
+            margin-bottom: 25px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background-color: #fafafa;
+        }
+
+        .meaning-text {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+
+        .hint-display {
+            min-height: 1.5em; 
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            white-space: pre; 
+            text-align: left;
+            padding: 0 5px;
+            line-height: 1.5;
+            border-bottom: 2px solid #ccc; 
+        }
+
+        .correct {
+            color: #27ae60; /* Xanh lá: Gõ đúng */
+        }
+
+        .incorrect {
+            color: #e74c3c; /* Đỏ: Gõ sai */
+        }
+
+        #user-input {
+            width: 100%;
+            padding: 12px;
+            font-size: 1rem;
+            border: 2px solid #ccc;
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #user-input:focus {
+            border-color: #3498db;
+        }
+
+        #next-word-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 15px;
+        }
+
+        #next-word-btn:hover {
+            background-color: #2980b9;
+        }
+
+        #message {
+            margin-top: 15px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Luyện Gõ Từ Vựng IELTS</h1>
+        <div class="vocab-card">
+            <p id="vietnamese-meaning" class="meaning-text">Đang tải từ vựng...</p>
+            
+            <div id="hint-display" class="hint-display"></div>
+            
+            <input type="text" id="user-input" placeholder="Gõ từ tiếng Anh ở đây..." autofocus autocomplete="off" disabled>
+        </div>
+        
+        <button id="next-word-btn" disabled>Từ Tiếp Theo</button>
+        <p id="message"></p>
+    </div>
+
+    <script>
+        let vocabulary = []; // Mảng này sẽ được điền từ file JSON
+        let currentWordIndex = 0;
+        let currentWord = "";
+        let initialHintChars = [];
+
+        const meaningEl = document.getElementById('vietnamese-meaning');
+        const hintDisplayEl = document.getElementById('hint-display');
+        const inputEl = document.getElementById('user-input');
+        const nextBtn = document.getElementById('next-word-btn');
+        const messageEl = document.getElementById('message');
+
+        /**
+         * Tải dữ liệu từ vựng từ file words.json
+         */
+        async function loadVocabulary() {
+            try {
+                const response = await fetch('words.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                // Chuẩn hóa dữ liệu: Loại bỏ (n), (v),... trong 'en'
+                vocabulary = data.map(item => ({
+                    vn: item.vn,
+                    en: item.en.replace(/\s*\([^)]*\)\s*$/, '').trim()
+                }));
+                
+                if (vocabulary.length > 0) {
+                    meaningEl.textContent = 'Đã tải xong. Bắt đầu nào!';
+                    nextBtn.disabled = false;
+                    inputEl.disabled = false;
+                    loadNewWord();
+                } else {
+                    meaningEl.textContent = 'Lỗi: Không tìm thấy từ vựng trong file JSON.';
+                }
+            } catch (error) {
+                console.error('Lỗi khi tải từ vựng:', error);
+                meaningEl.textContent = `Lỗi khi tải file words.json: ${error.message}. Vui lòng kiểm tra tên file và cấu trúc.`;
+            }
+        }
+
+        /**
+         * Chọn từ ngẫu nhiên và hiển thị.
+         */
+        function loadNewWord() {
+            if (vocabulary.length === 0) return;
+
+            currentWordIndex = Math.floor(Math.random() * vocabulary.length);
+            currentWord = vocabulary[currentWordIndex].en.toLowerCase(); 
+            const vnMeaning = vocabulary[currentWordIndex].vn;
+
+            meaningEl.textContent = vnMeaning;
+            inputEl.value = ''; 
+            inputEl.disabled = false;
+            inputEl.focus();
+            messageEl.textContent = 'Bắt đầu gõ từ tiếng Anh.';
+            
+            // Tạo mảng ký tự gợi ý ban đầu
+            initialHintChars = Array.from(currentWord).map(char => {
+                if (/[a-z]/.test(char)) {
+                    return '*';
+                } 
+                else {
+                    return char;
+                }
+            });
+
+            // Hiển thị gợi ý ban đầu
+            hintDisplayEl.innerHTML = `<span class="incorrect">${initialHintChars.join('')}</span>`; 
+        }
+
+        /**
+         * Xử lý sự kiện khi người dùng gõ phím.
+         */
+        function handleInput() {
+            const userInput = inputEl.value.toLowerCase(); 
+            let hintHTML = '';
+            let isMistake = false;
+            let isCompleteAndCorrect = true;
+
+            for (let i = 0; i < currentWord.length; i++) {
+                const targetChar = currentWord[i];
+                const userChar = userInput[i];
+
+                if (userChar === undefined) {
+                    const hintChar = initialHintChars[i];
+                    hintHTML += `<span class="incorrect">${hintChar}</span>`;
+                    isCompleteAndCorrect = false; 
+                    isMistake = true; 
+                } 
+                else if (isMistake) {
+                    hintHTML += `<span class="incorrect">${userChar}</span>`;
+                    isCompleteAndCorrect = false;
+                }
+                else if (targetChar === userChar) {
+                    hintHTML += `<span class="correct">${targetChar}</span>`;
+                } 
+                else {
+                    hintHTML += `<span class="incorrect">${userChar}</span>`;
+                    isMistake = true; 
+                    isCompleteAndCorrect = false;
+                }
+            }
+            
+            // Nếu người dùng gõ dư ký tự, tô đỏ phần dư
+            if (userInput.length > currentWord.length) {
+                const excess = userInput.substring(currentWord.length);
+                hintHTML += `<span class="incorrect">${excess}</span>`;
+                isCompleteAndCorrect = false;
+                isMistake = true;
+            }
+
+            hintDisplayEl.innerHTML = hintHTML;
+
+            if (userInput.length === currentWord.length && isCompleteAndCorrect) {
+                // Lấy lại từ gốc có cả (n), (v) để hiển thị
+                const originalEn = vocabulary[currentWordIndex].en;
+                messageEl.textContent = `🎉 Chính xác! Từ '${originalEn}' có nghĩa là '${vocabulary[currentWordIndex].vn}'.`;
+                inputEl.disabled = true; 
+            } else if (isMistake) {
+                messageEl.textContent = `❌ Lỗi! Từ chỗ màu đỏ, bạn cần sửa lại.`;
+            } else if (userInput.length > 0 && !isMistake) {
+                messageEl.textContent = `Tiếp tục gõ...`;
+            }
+        }
+
+        // --- Thiết lập sự kiện ---
+        inputEl.addEventListener('input', handleInput);
+        nextBtn.addEventListener('click', loadNewWord);
+
+        // Tải từ vựng khi trang load
+        window.onload = loadVocabulary;
+    </script>
+</body>
+</html>
